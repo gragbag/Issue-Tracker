@@ -143,25 +143,25 @@ module.exports = function (app) {
       const _id = req.body._id;
 
       if (!_id) {
-        return res.send({error: 'missing _id'})
+        return res.send({ error: 'missing _id' })
       }
 
       if (!ObjectId.isValid(_id)) {
-        return res.send({error: 'could not delete', '_id': _id});
+        return res.send({ error: 'could not delete', '_id': _id });
       }
       
       let projectData = await Project.findOne({project_name: project});
 
       if (!projectData) {
-        return res.send({error: 'could not delete', '_id': _id});
+        return res.send({ error: 'could not delete', '_id': _id });
       }
 
       const project_id = projectData._id;
 
-      const deletedIssue = Issue.findOneAndDelete({_id: _id, project_id: project_id});
+      const deletedIssue = await Issue.findOneAndDelete({_id: _id, project_id: project_id});
 
       if (!deletedIssue) {
-        return res.send({error: 'could not delete', '_id': _id});
+        return res.send({ error: 'could not delete', '_id': _id });
       }
 
       res.send({ result: 'successfully deleted', '_id': _id });
