@@ -19,12 +19,15 @@ module.exports = function (app) {
     project_id: {type: ObjectId, ref: 'Project'},
     issue_title: {
       type: String,
+      required: true
     },
     issue_text: {
       type: String,
+      required: true
     },
     created_by: {
       type: String,
+      required: true
     },
     assigned_to: String,
     status_text: String,
@@ -43,14 +46,14 @@ module.exports = function (app) {
       let projectData = await Project.findOne({project_name: project});
 
       if (!projectData) {
-        res.send({error: 'Project not found'});
+        return res.send({error: 'Project not found'});
       }
 
       const project_id = projectData._id;
 
       req.query.project_id = project_id;
 
-      const issues = await Issue.find(req.query, {__v: 0}, (err, data) => data);
+      const issues = await Issue.find(req.query, {__v: 0});
 
       res.send(issues);
 
@@ -61,13 +64,21 @@ module.exports = function (app) {
       const title = req.body.issue_title;
       const text = req.body.issue_text;
       const created_by = req.body.created_by;
-      const assigned_to = req.body.assigned_to;
-      const status_text = req.body.status_text;
+      let assigned_to = req.body.assigned_to;
+      let status_text = req.body.status_text;
 
       if (!title || !text || !created_by) {
-        res.send({
-          error: 'requred field(s) missing'
+        return res.send({
+          error: 'required field(s) missing'
         })
+      }
+
+      if (!assigned_to) {
+        assigned_to = "";
+      }
+
+      if (!status_text) {
+        status_text = "";
       }
 
       let projectData = await findProjectIdOrCreateNew(project);
@@ -96,7 +107,7 @@ module.exports = function (app) {
       const project_id = await Project.findOne({project_name: project}, (err, data) => data);
 
       if (!_id || !project_id) {
-        res.send({
+        return res.send({
           error: 'missing _id'
         })
       }
@@ -113,40 +124,41 @@ module.exports = function (app) {
       }
 
       if (!ObjectId.isValid(_id)) {
-        return res.send({ error: 'invalid _id'});
+        return res.send({ error: 'could not update', '_id': _id });
       }
 
       req.body.updated_on = new Date();
 
-      await Issue.findOneAndUpdate({_id: _id, project_id: project_id}, {$set: req.body}, (err, data) => {
-        if (err) return res.send({ error: 'could not update', _id: _id });
-        else
-          res.send({ result: 'successfully updated', _id: _id });
-      });
+      let updatedIssue = await Issue.findOneAndUpdate({_id: _id, project_id: project_id}, {$set: req.body});
+
+      if (!updatedIssue) {
+        return res.send({ error: 'could not update', _id: _id });
+      }
+
+      res.send({ result: 'successfully updated', _id: _id });
     })
     
     .delete(async function (req, res){
       let project = req.params.project;
-      
-      let projectData = await Project.findOne({project_name: project});
-
-      if (!projectData) {
-        return res.send({error: 'Project not found'});
-      }
-
-      let project_id = projectData._id;
-
-      let _id = req.body._id;
+      const _id = req.body._id;
 
       if (!_id) {
         return res.send({error: 'missing _id'})
       }
 
       if (!ObjectId.isValid(_id)) {
-        return res.send({error: 'invalid _id'});
+        return res.send({error: 'could not delete', '_id': _id});
+      }
+      
+      let projectData = await Project.findOne({project_name: project});
+
+      if (!projectData) {
+        return res.send({error: 'could not delete', '_id': _id});
       }
 
-      const deletedIssue = Issue.findOneAndDelete({_id: _id, project_id: project_id}, (err, data) => data);
+      const project_id = projectData._id;
+
+      const deletedIssue = Issue.findOneAndDelete({_id: _id, project_id: project_id});
 
       if (!deletedIssue) {
         return res.send({error: 'could not delete', '_id': _id});
